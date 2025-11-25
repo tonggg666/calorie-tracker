@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>轻食记 v3.0 - 专业版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* 定义新的主题色 */
+        :root {
+            --color-primary: #06b6d4; /* Teal 500 */
+            --color-dark: #1e293b; /* Slate 800 */
+        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f8fafc; } /* Light Slate background */
+        .primary-bg { background-color: var(--color-primary); }
+        .primary-text { color: var(--color-primary); }
+        .primary-border { border-color: var(--color-primary); }
+        .primary-hover:hover { background-color: #0e7490; } /* Darker Teal */
+        
+        /* 针对 Tab 切换的过渡效果 */
+        .tab-content { transition: opacity 0.3s ease-in-out; }
+        /* 隐藏滚动条但允许滚动 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="text-gray-700 pb-20">
+
+    <nav class="primary-bg text-white p-4 shadow-xl sticky top-0 z-40">
+        <div class="container mx-auto flex justify-between items-center max-w-3xl">
+            <div class="flex items-center">
+                <h1 class="text-2xl font-extrabold mr-4"><i class="fas fa-chart-line mr-2"></i>Calorie.AI</h1>
+            </div>
+            <button onclick="openProfileModal()" class="text-sm bg-sky-500 hover:bg-sky-400 px-3 py-1 rounded transition">
+                <i class="fas fa-user-cog"></i> 档案
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-4 max-w-3xl">
+
+        <div class="bg-white rounded-xl p-6 shadow-2xl mb-6 mt-4 border-t-4 primary-border fade-in">
+            <div class="flex justify-between items-end mb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">今日摄入概览</h2>
+                    <p class="text-xs text-gray-500" id="current-date-display">日期: --</p>
+                </div>
+                <div class="text-right">
+                    <span id="display-target" class="text-3xl font-extrabold text-gray-800">--</span>
+                    <span class="text-sm text-gray-500">kcal 目标</span>
+                </div>
+            </div>
+
+            <div class="relative pt-1">
+                <div class="flex mb-2 items-center justify-between text-base font-semibold">
+                    <span class="primary-text bg-sky-50 px-3 py-1 rounded-full">已摄入: <b id="display-intake">0</b></span>
+                    <span id="display-remaining-label" class="primary-text">剩余: <b id="display-remaining">--</b></span>
+                </div>
+                <div class="overflow-hidden h-3 text-xs flex rounded-full bg-gray-200">
+                    <div id="progress-bar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center primary-bg transition-all duration-700 rounded-full"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+            <div class="flex border-b border-gray-200 overflow-x-auto no-scrollbar mb-4">
+                <button class="tab-button text-sm md:text-base font-medium py-2 px-3 md:px-6 transition duration-300 ease-in-out" data-meal="早餐" onclick="switchMealTab('早餐')">
+                    <i class="fas fa-coffee mr-1"></i> 早餐
+                </button>
+                <button class="tab-button text-sm md:text-base font-medium py-2 px-3 md:px-6 transition duration-300 ease-in-out" data-meal="午餐" onclick="switchMealTab('午餐')">
+                    <i class="fas fa-pizza-slice mr-1"></i> 午餐
+                </button>
+                <button class="tab-button text-sm md:text-base font-medium py-2 px-3 md:px-6 transition duration-300 ease-in-out" data-meal="晚餐" onclick="switchMealTab('晚餐')">
+                    <i class="fas fa-drumstick-bite mr-1"></i> 晚餐
+                </button>
+                <button class="tab-button text-sm md:text-base font-medium py-2 px-3 md:px-6 transition duration-300 ease-in-out" data-meal="加餐" onclick="switchMealTab('加餐')">
+                    <i class="fas fa-cookie-bite mr-1"></i> 加餐
+                </button>
+            </div>
+
+            <div id="meal-tab-content">
+                </div>
+        </div>
+        
+        <div class="flex justify-between items-center mb-4">
+            <button onclick="toggleHistory()" class="text-sky-600 text-sm font-bold hover:underline">
+                <i class="fas fa-history"></i> 查看历史记录
+            </button>
+            <button onclick="resetDay()" class="text-red-500 text-sm hover:underline">
+                <i class="fas fa-trash-alt"></i> 清空今日
+            </button>
+        </div>
+        
+        <div id="history-section" class="hidden bg-white rounded-xl p-4 shadow-inner mb-6 bg-gray-50 border border-gray-200">
+             <h3 class="font-bold text-gray-600 mb-2">📅 饮食日历</h3>
+             <div id="history-list" class="space-y-2 max-h-60 overflow-y-auto no-scrollbar"></div>
+        </div>
+
+    </div>
+
+    <div id="profile-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all scale-100">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-ruler-combined mr-2"></i>身体档案设置</h3>
+                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-xs font-bold text-gray-500">性别</label><select id="p-gender" class="w-full p-2 border rounded bg-gray-50"><option value="male">男</option><option value="female">女</option></select></div>
+                    <div><label class="text-xs font-bold text-gray-500">年龄</label><input type="number" id="p-age" class="w-full p-2 border rounded" placeholder="岁"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-xs font-bold text-gray-500">身高 (cm)</label><input type="number" id="p-height" class="w-full p-2 border rounded" placeholder="cm"></div>
+                    <div><label class="text-xs font-bold text-gray-500">体重 (kg)</label><input type="number" id="p-weight" class="w-full p-2 border rounded" placeholder="kg"></div>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">日常活动量</label>
+                    <select id="p-activity" class="w-full p-2 border rounded bg-gray-50">
+                        <option value="1.2">久坐不动 (办公室工作)</option><option value="1.375">轻度运动 (每周1-3次)</option>
+                        <option value="1.55">中度运动 (每周3-5次)</option><option value="1.725">高强度 (体力工作/每天运动)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">你的目标</label>
+                    <select id="p-goal" class="w-full p-2 border rounded bg-gray-50">
+                        <option value="0.85">温和减脂 (推荐)</option><option value="0.75">快速减脂 (较难)</option><option value="1">保持体重</option>
+                    </select>
+                </div>
+                <div class="pt-2">
+                    <button onclick="saveProfile()" class="w-full bg-sky-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-sky-700 transition">
+                        计算并保存目标
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- V3 核心交互与数据 ---
+        const meals = ['早餐', '午餐', '晚餐', '加餐'];
+        const todayStr = new Date().toISOString().split('T')[0]; 
+        let userProfile = {}; 
+        let dailyLogs = {}; 
+        let activeMeal = '早餐'; // 新增：记录当前激活的餐食 Tab
+
+        // --- V3 初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            document.getElementById('current-date-display').innerText = `日期: ${todayStr}`;
+            
+            // 首次加载，显示第一个 Tab
+            switchMealTab(activeMeal); 
+            
+            if (!userProfile.targetCalories) {
+                openProfileModal();
+            }
+        });
+
+        // --- Tab 切换函数 (高级交互) ---
+        function switchMealTab(meal) {
+            activeMeal = meal;
+            const tabContent = document.getElementById('meal-tab-content');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            
+            // 1. 切换按钮的样式
+            tabButtons.forEach(btn => {
+                btn.classList.remove('primary-border', 'border-b-4', 'text-gray-900');
+                btn.classList.add('border-b-2', 'border-transparent', 'text-gray-500', 'hover:text-gray-800');
+                if (btn.getAttribute('data-meal') === meal) {
+                    btn.classList.add('primary-border', 'border-b-4', 'text-gray-900');
+                    btn.classList.remove('text-gray-500', 'hover:text-gray-800');
+                }
+            });
+
+            // 2. 渲染内容
+            tabContent.innerHTML = renderMealContent(meal);
+            tabContent.classList.add('fade-in');
+        }
+
+        // --- 渲染单个 Tab 内容 (V3 重写) ---
+        function renderMealContent(meal) {
+            const currentLog = dailyLogs[todayStr] || [];
+            const mealItems = currentLog.filter(i => i.meal === meal);
+            const mealTotal = mealItems.reduce((s, i) => s + i.cal, 0);
+
+            let listHtml = mealItems.map((item, index) => `
+                <div class="flex justify-between items-center text-sm border-b border-gray-100 py-2 last:border-0 hover:bg-gray-50 px-2 rounded transition">
+                    <span>${item.name} <span class="text-xs text-gray-400">(${item.portionDesc})</span></span>
+                    <div class="flex items-center">
+                        <span class="font-bold text-sky-600 mr-3">+${item.cal}</span>
+                        <button onclick="deleteItem('${meal}', ${item.timestamp})" class="text-gray-300 hover:text-red-400"><i class="fas fa-times-circle"></i></button>
+                    </div>
+                </div>
+            `).join('');
+
+            // 提示空状态
+            if (listHtml === '') {
+                 listHtml = '<p class="text-center text-gray-400 text-xs py-4">本餐暂无记录，快去添加吧！</p>';
+            }
+
+            return `
+                <div class="space-y-4">
+                    <p class="text-right text-base font-bold text-gray-600">本餐总计：<span class="primary-text">${mealTotal} kcal</span></p>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg shadow-inner">
+                        <h4 class="font-semibold text-gray-700 mb-2">${meal} 详情</h4>
+                        ${listHtml}
+                    </div>
+
+                    <div class="flex flex-col gap-2 p-2 border rounded-lg border-gray-200">
+                        <div class="flex gap-2">
+                            <input type="text" id="in-${meal}-name" placeholder="吃了什么?" class="flex-1 p-2 border rounded text-sm outline-none focus:border-sky-500">
+                            <button onclick="addFood('${meal}')" class="bg-sky-600 text-white px-4 rounded hover:bg-sky-700 transition"><i class="fas fa-plus"></i> 记录</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <select id="in-${meal}-p" class="flex-1 p-1.5 border rounded text-xs bg-white text-gray-600">
+                                <option value="0.5">少点 (0.5份)</option><option value="1" selected>正常 (1份)</option><option value="1.5">多点 (1.5份)</option>
+                            </select>
+                            <select id="in-${meal}-o" class="flex-1 p-1.5 border rounded text-xs bg-white text-gray-600">
+                                <option value="0.8">清淡</option><option value="1" selected>常规</option><option value="1.3">油腻</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- V2 逻辑保留 (仅调用方式更新) ---
+        
+        function addFood(meal) {
+            const name = document.getElementById(`in-${meal}-name`).value;
+            const pVal = parseFloat(document.getElementById(`in-${meal}-p`).value);
+            const oVal = parseFloat(document.getElementById(`in-${meal}-o`).value);
+            const pDesc = document.getElementById(`in-${meal}-p`).options[document.getElementById(`in-${meal}-p`).selectedIndex].text;
+
+            if(!name) return;
+            let base = 250;
+            if (name.includes('肉') || name.includes('炸')) base = 400;
+            if (name.includes('菜') || name.includes('果')) base = 100;
+            if (name.includes('米') || name.includes('面')) base = 200;
+            const cal = Math.round(base * pVal * oVal);
+
+            dailyLogs[todayStr].push({
+                meal: meal, name: name, cal: cal, portionDesc: pDesc, timestamp: new Date().getTime()
+            });
+
+            document.getElementById(`in-${meal}-name`).value = ''; // 清空输入框
+            saveData();
+        }
+
+        function deleteItem(meal, timestamp) {
+            dailyLogs[todayStr] = dailyLogs[todayStr].filter(item => item.timestamp !== timestamp);
+            saveData();
+        }
+        
+        function saveData() {
+            localStorage.setItem('diet_profile', JSON.stringify(userProfile));
+            localStorage.setItem('diet_logs', JSON.stringify(dailyLogs));
+            
+            renderDashboard(); 
+            // 关键：只重新渲染当前活动的 Tab，提高性能和体验
+            switchMealTab(activeMeal); 
+            renderHistory();
+        }
+
+        function renderDashboard() {
+            const target = userProfile.targetCalories || 2000;
+            const currentLog = dailyLogs[todayStr] || [];
+            const totalIntake = currentLog.reduce((sum, item) => sum + item.cal, 0);
+            const remaining = target - totalIntake;
+
+            document.getElementById('display-target').innerText = target;
+            document.getElementById('display-intake').innerText = totalIntake;
+            document.getElementById('display-remaining').innerText = remaining;
+            
+            let percent = (totalIntake / target) * 100;
+            const bar = document.getElementById('progress-bar');
+            bar.style.width = `${Math.min(percent, 100)}%`;
+            
+            const remainingLabel = document.getElementById('display-remaining-label');
+            const navBar = document.querySelector('.primary-bg');
+
+            if (remaining < 0) {
+                bar.classList.remove('primary-bg');
+                bar.classList.add('bg-red-500');
+                remainingLabel.classList.add('text-red-500');
+                navBar.classList.remove('primary-bg');
+                navBar.classList.add('bg-red-600'); // 超出时顶部导航变色
+            } else {
+                bar.classList.add('primary-bg');
+                bar.classList.remove('bg-red-500');
+                remainingLabel.classList.remove('text-red-500');
+                navBar.classList.add('primary-bg');
+                navBar.classList.remove('bg-red-600');
+            }
+        }
+        
+        // --- (省略了 loadData, saveProfile, renderHistory, 模态框控制等 V2 代码，请确保你复制的是完整代码块) ---
+        
+        function loadData() {
+            const storedProfile = localStorage.getItem('diet_profile');
+            const storedLogs = localStorage.getItem('diet_logs');
+            
+            if (storedProfile) userProfile = JSON.parse(storedProfile);
+            if (storedLogs) dailyLogs = JSON.parse(storedLogs);
+
+            if (!dailyLogs[todayStr]) {
+                dailyLogs[todayStr] = [];
+            }
+        }
+
+        function saveProfile() {
+            const gender = document.getElementById('p-gender').value;
+            const age = parseFloat(document.getElementById('p-age').value);
+            const height = parseFloat(document.getElementById('p-height').value);
+            const weight = parseFloat(document.getElementById('p-weight').value);
+            const activity = parseFloat(document.getElementById('p-activity').value);
+            const goal = parseFloat(document.getElementById('p-goal').value);
+
+            if (!age || !height || !weight) {
+                alert("请完整填写所有数据哦！");
+                return;
+            }
+
+            let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+            bmr += (gender === 'male') ? 5 : -161;
+            const target = Math.round(bmr * activity * goal);
+
+            userProfile = { gender, age, height, weight, activity, goal, targetCalories: target };
+            
+            saveData();
+            closeProfileModal();
+            alert(`设置成功！你的每日推荐摄入量为 ${target} kcal`);
+        }
+
+        function renderHistory() {
+            const listEl = document.getElementById('history-list');
+            listEl.innerHTML = '';
+            
+            const dates = Object.keys(dailyLogs).sort().reverse();
+            
+            dates.forEach(date => {
+                if (date === todayStr) return;
+
+                const dayLog = dailyLogs[date];
+                const dayTotal = dayLog.reduce((sum, i) => sum + i.cal, 0);
+                const target = userProfile.targetCalories || 2000;
+                
+                const colorClass = dayTotal > target ? 'text-red-500' : 'text-sky-600';
+                const icon = dayTotal > target ? '⚠️' : '✅';
+
+                listEl.innerHTML += `
+                    <div class="flex justify-between items-center bg-white p-3 rounded border border-gray-100 text-sm hover:shadow-md transition">
+                        <span class="text-gray-500">${date}</span>
+                        <div>
+                            <span class="mr-2 text-gray-400">${target}目标</span>
+                            <span class="font-bold ${colorClass}">${dayTotal} kcal ${icon}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (listEl.innerHTML === '') listEl.innerHTML = '<p class="text-center text-gray-400 text-xs p-4">暂无历史记录</p>';
+        }
+
+        function openProfileModal() { document.getElementById('profile-modal').classList.remove('hidden'); }
+        function closeProfileModal() { document.getElementById('profile-modal').classList.add('hidden'); }
+        function toggleHistory() {
+            const el = document.getElementById('history-section');
+            el.classList.toggle('hidden');
+        }
+        
+        function resetDay() {
+            if(confirm("确定要清空今日记录吗？")) {
+                dailyLogs[todayStr] = [];
+                saveData();
+            }
+        }
+    </script>
+</body>
+</html>
